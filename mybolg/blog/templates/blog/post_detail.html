@@ -1,0 +1,153 @@
+{% extends "blog/base.html" %}
+
+{% block title %}{{ post.title }} - 我的个人博客{% endblock %}
+
+{% block content %}
+    <div class="main-content">
+        <!-- 文章详情 -->
+        <article class="post-detail">
+            <!-- 文章标题 -->
+            <h1 class="post-title">{{ post.title }}</h1>
+            
+            <!-- 文章元信息 -->
+            <div class="post-meta mb-4">
+                <span class="author"><i class="fa fa-user"></i> <a href="{% url 'blog:author_posts' post.author.id %}">{{ post.author.username }}</a></span>
+                <span class="time"><i class="fa fa-clock-o"></i> {{ post.publish_time|date:"Y-m-d H:i" }}</span>
+                <span class="category"><i class="fa fa-folder"></i> <a href="{% url 'blog:category_posts' post.category.id %}">{{ post.category.name }}</a></span>
+                <span class="views"><i class="fa fa-eye"></i> {{ post.views }} 浏览</span>
+                <span class="comments"><i class="fa fa-comment"></i> {{ post.comments.count }} 评论</span>
+            </div>
+            
+            <!-- 文章特色图片 -->
+            {% if post.featured_image %}
+                <div class="post-image mb-5">
+                    <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" class="img-fluid rounded" style="width: 100%;">
+                </div>
+            {% endif %}
+            
+            <!-- 文章内容 -->
+            <div class="post-content mb-5">
+                {{ post.content|safe }}
+            </div>
+            
+            <!-- 文章标签 -->
+            {% if post.tags.all %}
+                <div class="post-tags mb-5">
+                    <i class="fa fa-tags"></i>
+                    {% for tag in post.tags.all %}
+                        <a href="{% url 'blog:tag_posts' tag.id %}" class="badge bg-secondary mx-1">{{ tag.name }}</a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <!-- 文章操作按钮 -->
+            <div class="post-actions mb-5">
+                <button type="button" class="btn btn-outline-primary mr-2">
+                    <i class="fa fa-thumbs-up"></i> 点赞
+                </button>
+                <button type="button" class="btn btn-outline-secondary mr-2">
+                    <i class="fa fa-share-alt"></i> 分享
+                </button>
+                <a href="" class="btn btn-outline-success">
+                    <i class="fa fa-bookmark-o"></i> 收藏
+                </a>
+            </div>
+            
+            <!-- 上一篇/下一篇 -->
+            <div class="post-navigation mb-5">
+                {% if prev_post %}
+                    <div class="prev-post">
+                        <a href="{{ prev_post.get_absolute_url }}" class="btn btn-outline-info">
+                            <i class="fa fa-angle-left"></i> 上一篇: {{ prev_post.title }}
+                        </a>
+                    </div>
+                {% endif %}
+                {% if next_post %}
+                    <div class="next-post text-right">
+                        <a href="{{ next_post.get_absolute_url }}" class="btn btn-outline-info">
+                            下一篇: {{ next_post.title }} <i class="fa fa-angle-right"></i>
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- 评论区域 -->
+            <div class="comments-section">
+                <h3 class="comments-title mb-4">{{ post.comments.count }} 条评论</h3>
+                
+                <!-- 评论列表 -->
+                <div class="comment-list">
+                    {% for comment in comments %}
+                        <div class="comment-item">
+                            <div class="comment-header">
+                                <span class="comment-author">{{ comment.author.username }}</span>
+                                <span class="comment-time">{{ comment.created_time|date:"Y-m-d H:i" }}</span>
+                            </div>
+                            <div class="comment-content">
+                                {{ comment.content }}
+                            </div>
+                            <div class="comment-actions">
+                                <button type="button" class="btn btn-sm btn-link reply-btn" data-comment-id="{{ comment.id }}">
+                                    <i class="fa fa-reply"></i> 回复
+                                </button>
+                            </div>
+                            
+                            <!-- 回复表单 (默认隐藏) -->
+                            <div class="reply-form d-none mt-3" id="reply-form-{{ comment.id }}">
+                                <form action="{% url 'blog:reply_comment' comment.id %}" method="post">
+                                    {% csrf_token %}
+                                    <div class="form-group">
+                                        <textarea name="content" rows="3" class="form-control" placeholder="写下您的回复..." required></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-sm mt-2">提交回复</button>
+                                </form>
+                            </div>
+                            
+                            <!-- 回复列表 -->
+                            {% if comment.replies.all %}
+                                <div class="reply-list">
+                                    {% for reply in comment.replies.all %}
+                                        <div class="comment-item">
+                                            <div class="comment-header">
+                                                <span class="comment-author">{{ reply.author.username }}</span>
+                                                <span class="comment-time">{{ reply.created_time|date:"Y-m-d H:i" }}</span>
+                                            </div>
+                                            <div class="comment-content">
+                                                <span class="text-muted">@{{ reply.parent.author.username }}:</span> {{ reply.content }}
+                                            </div>
+                                            <div class="comment-actions">
+                                                <button type="button" class="btn btn-sm btn-link reply-btn" data-comment-id="{{ reply.id }}">
+                                                    <i class="fa fa-reply"></i> 回复
+                                                </button>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% empty %}
+                        <div class="alert alert-info">暂无评论，快来发表第一条评论吧！</div>
+                    {% endfor %}
+                </div>
+                
+                <!-- 添加评论表单 -->
+                <div class="comment-form mt-5">
+                    <h4 class="comment-form-title mb-4">发表评论</h4>
+                    {% if user.is_authenticated %}
+                        <form action="{% url 'blog:add_comment' post.id %}" method="post">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <textarea name="content" rows="5" class="form-control" placeholder="写下您的评论..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary mt-3">提交评论</button>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-info">
+                            请先<a href="{% url 'login' %}">登录</a>后再发表评论。
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </article>
+    </div>
+{% endblock %}
